@@ -40,11 +40,11 @@ def parse_resume(resume_text):
     },
 
     "experience_years": {
-        "type": ["number", "null"]
-    },
+    "type": ["number", "string", "null"]
+},
 
     "preferred_roles": {
-        "type": ["array", "null"],
+    "type": ["array", "string", "null"],
         "items": {
             "type": "string"
         }

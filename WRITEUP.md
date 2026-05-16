@@ -1,91 +1,108 @@
+
+---
+
 # WRITEUP.md
+
+```md id="jlwmpL"
+# WRITEUP
 
 # 1. Design Choices
 
-I used the `sentence-transformers/all-MiniLM-L6-v2` embedding model for semantic similarity ranking. This model was selected because it is lightweight, fast, and suitable for deployment within Vercel’s memory and execution constraints. The model provides good semantic retrieval quality while keeping inference latency low.
+I initially selected the `sentence-transformers/all-MiniLM-L6-v2` model because it is lightweight, widely used for semantic similarity tasks, and performs well for embedding-based retrieval systems. The goal of the system was to generate embeddings for resumes and job descriptions and compute cosine similarity between them for semantic ranking.
 
-I considered larger embedding models such as BGE-large and MPNet, but rejected them because they would significantly increase cold start time and memory usage during deployment. Since the assignment dataset contains only 50 jobs, a lightweight embedding model was sufficient.
+However, while deploying to Vercel, I encountered serverless deployment limitations. The local sentence-transformers pipeline required PyTorch and transformer dependencies, which exceeded Vercel’s Lambda bundle size and memory constraints on the free tier.
 
-For ranking, I used cosine similarity between the resume embedding and precomputed job embeddings. In addition to semantic similarity, I implemented lightweight lexical skill-overlap boosting to improve precision for technical skill matching.
+To solve this, I migrated embedding generation to the Hugging Face hosted inference API while preserving the same semantic retrieval architecture. This significantly reduced deployment size and improved compatibility with serverless infrastructure.
 
-I used Groq’s `llama-3.3-70b-versatile` model for reasoning and tool-calling because it offers fast inference and supports structured tool usage while remaining free and easy to deploy.
+Alternative approaches considered:
+- OpenAI embeddings
+- Cohere embeddings
+- Local sentence-transformers pipeline
+
+I rejected OpenAI and Cohere mainly to avoid paid API usage and additional account setup complexity. I also rejected keeping the local transformer pipeline because it was not practical within Vercel free-tier constraints.
+
+Trade-offs:
+- Hosted embeddings reduce deployment complexity
+- Slightly higher network latency due to API calls
+- Better production compatibility and scalability
 
 ---
 
 # 2. Agentic Architecture
 
-The system uses a two-step agentic workflow:
+The system follows a multi-step agentic pipeline:
 
-1. Resume Parsing Tool
-2. Match Reasoning Layer
+1. Resume Parsing Agent
+   - Uses Groq tool-calling to extract structured candidate data from raw resume text.
+   - Extracted fields include skills, preferred roles, education, and experience.
 
-The first tool extracts structured information from raw resume text using Groq function/tool calling. The parser returns:
-- candidate name
-- skills
-- experience
-- preferred roles
-- education
+2. Embedding + Ranking Tool
+   - Resume and job descriptions are converted into embeddings.
+   - Cosine similarity is computed between vectors to rank jobs semantically.
 
-The second reasoning layer takes the top-ranked jobs from semantic retrieval and generates recruiter-style explanations for why each role is or is not a good fit.
+3. Explanation Generation Agent
+   - The LLM generates detailed explanations describing why each job matches the candidate profile.
 
-I intentionally separated retrieval from reasoning:
-- semantic embeddings handle scalable ranking
-- the LLM handles interpretation and explanation
+4. Clarification Question Agent
+   - The system generates a follow-up question when candidate preferences or experience are ambiguous.
 
-This separation improves modularity, debuggability, and reliability compared to a single large prompt chain.
+5. Refine Endpoint
+   - Candidate clarification responses are merged back into the profile.
+   - Rankings are recomputed dynamically.
 
-Potential failure modes:
-- incorrect resume parsing
-- hallucinated missing skills
-- weak rankings for extremely short resumes
-- semantic confusion when resumes contain unrelated technologies
+I intentionally separated the workflow into multiple tool-style stages instead of one large prompt because:
+- it improves modularity,
+- allows independent debugging,
+- makes ranking deterministic,
+- and reduces hallucination risk.
+
+Failure modes:
+- Weak resumes with limited technical keywords may reduce embedding quality.
+- Ambiguous resumes can produce incomplete structured extraction.
+- LLM-generated explanations may occasionally overestimate candidate suitability.
 
 ---
 
 # 3. Honest Weaknesses
 
-The system may struggle with:
-- noisy resumes
-- resumes with poor formatting
-- resumes containing excessive non-technical content
-- ambiguous role preferences
+The system still has several limitations.
 
-Because embeddings are generated from raw text, poorly written resumes can reduce semantic retrieval quality.
+Poorly written resumes with minimal technical detail may produce weak semantic embeddings and inaccurate rankings. Since embedding quality depends heavily on textual clarity, vague resumes can reduce recommendation quality.
 
-At scale (10,000+ concurrent requests), the current architecture would face:
-- inference bottlenecks
-- increased cold starts
-- memory pressure
-- API rate limiting
+The system is also not optimized for high-scale production traffic. At 10,000 concurrent requests:
+- repeated embedding API calls could become slow,
+- serverless cold starts may increase latency,
+- and external API rate limits could become bottlenecks.
 
-The current implementation also performs explanation generation sequentially, which increases latency.
+Several engineering shortcuts were taken due to time constraints:
+- no caching layer for embeddings,
+- no database persistence,
+- no async batching,
+- and no advanced reranking architecture.
 
-Due to time constraints, I intentionally avoided:
-- vector databases
-- async batching
-- distributed caching
-- authentication
-- advanced reranking pipelines
-- conversation memory
-
-The `/refine` endpoint currently performs lightweight reranking by augmenting the resume context rather than maintaining long-term structured conversational state.
+The recommendation engine currently relies purely on embedding similarity and does not incorporate:
+- weighting by experience,
+- seniority alignment,
+- or company/domain preferences.
 
 ---
 
 # 4. Next Steps
 
-If I had two more days, the highest-impact improvement would be implementing a dedicated reranking stage using cross-encoder models.
+If I had two more days, the highest-impact improvement would be implementing a hybrid retrieval and reranking pipeline.
 
-Currently, the system relies primarily on embedding similarity. A cross-encoder reranker would improve precision by jointly evaluating resume-job pairs rather than comparing embeddings independently.
+Currently, ranking depends only on embedding similarity. I would improve this by adding:
+- embedding retrieval for recall,
+- followed by LLM reranking for precision.
 
-This would significantly improve:
-- ranking accuracy
-- domain understanding
-- handling of nuanced technical matches
+This would significantly improve recommendation quality because:
+- embeddings are good at semantic retrieval,
+- while LLM reranking is better at nuanced reasoning.
 
 I would also add:
-- async explanation generation
-- vector database support
-- stronger candidate preference modeling
-- conversation memory for multi-turn refinement
-- better prompt evaluation and monitoring
+- embedding caching,
+- async processing,
+- vector database support,
+- and stronger resume normalization.
+
+These improvements would make the system more production-ready and scalable while improving ranking accuracy.

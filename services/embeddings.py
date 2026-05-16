@@ -4,12 +4,13 @@ import os
 HF_API_KEY = os.getenv("HF_API_KEY")
 
 API_URL = (
-    "https://api-inference.huggingface.co/models/"
+    "https://router.huggingface.co/hf-inference/models/"
     "sentence-transformers/all-MiniLM-L6-v2"
 )
 
 headers = {
-    "Authorization": f"Bearer {HF_API_KEY}"
+    "Authorization": f"Bearer {HF_API_KEY}",
+    "Content-Type": "application/json"
 }
 
 def get_embedding(text):
@@ -30,9 +31,6 @@ def get_embedding(text):
         )
 
     data = response.json()
-
-    if isinstance(data, dict) and data.get("error"):
-        raise Exception(data["error"])
 
     if isinstance(data, list):
 

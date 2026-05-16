@@ -20,9 +20,28 @@ def get_embedding(text):
         headers=headers,
         json={
             "inputs": text
-        }
+        },
+        timeout=30
     )
 
-    embedding = response.json()
+    if response.status_code != 200:
+        raise Exception(
+            f"HuggingFace API Error: "
+            f"{response.status_code} - {response.text}"
+        )
 
-    return embedding
+    try:
+        data = response.json()
+
+    except Exception:
+        raise Exception(
+            f"Invalid HF response: {response.text}"
+        )
+
+    if isinstance(data, dict) and data.get("error"):
+        raise Exception(data["error"])
+
+    if isinstance(data, list) and isinstance(data[0], list):
+        return data[0]
+
+    return data

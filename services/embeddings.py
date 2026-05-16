@@ -4,8 +4,7 @@ import os
 HF_API_KEY = os.getenv("HF_API_KEY")
 
 API_URL = (
-    "https://api-inference.huggingface.co/"
-    "pipeline/feature-extraction/"
+    "https://api-inference.huggingface.co/models/"
     "sentence-transformers/all-MiniLM-L6-v2"
 )
 
@@ -30,18 +29,16 @@ def get_embedding(text):
             f"{response.status_code} - {response.text}"
         )
 
-    try:
-        data = response.json()
-
-    except Exception:
-        raise Exception(
-            f"Invalid HF response: {response.text}"
-        )
+    data = response.json()
 
     if isinstance(data, dict) and data.get("error"):
         raise Exception(data["error"])
 
-    if isinstance(data, list) and isinstance(data[0], list):
-        return data[0]
+    if isinstance(data, list):
 
-    return data
+        if len(data) > 0 and isinstance(data[0], list):
+            return data[0]
+
+        return data
+
+    raise Exception(f"Unexpected response: {data}")

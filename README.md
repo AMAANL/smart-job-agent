@@ -19,7 +19,7 @@ AI-powered job recommendation system built using FastAPI, semantic embeddings, c
 
 - FastAPI
 - Groq API
-- sentence-transformers
+- Hugging Face Inference API (BAAI/bge-small-en-v1.5 embeddings)
 - scikit-learn
 - NumPy
 - Python
@@ -148,8 +148,8 @@ vercel.json
 
 # Design Highlights
 
-- Job embeddings are precomputed at startup for performance optimization
-- Hybrid ranking combines semantic similarity and skill overlap boosting
+- Job embeddings are generated and cached at startup using the Hugging Face hosted embedding API.
+- Semantic ranking is performed using embedding similarity and cosine similarity scoring.
 - Groq tool-calling is used for structured resume extraction
 - Resume/job matching is separated from reasoning for modularity
 

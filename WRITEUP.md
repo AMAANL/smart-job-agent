@@ -85,6 +85,8 @@ The recommendation engine currently relies purely on embedding similarity and do
 - seniority alignment,
 - or company/domain preferences.
 
+Pure embedding similarity can sometimes over-generalize toward semantically related technical domains. A future improvement would combine semantic retrieval with explicit skill-weighting and rule-based constraints.
+
 ---
 
 # 4. Next Steps

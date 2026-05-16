@@ -90,7 +90,28 @@ def parse_resume(resume_text):
     arguments = json.loads(
         tool_call.function.arguments
     )
+    tool_call = response.choices[0].message.tool_calls[0]
 
+    arguments = json.loads(
+        tool_call.function.arguments
+    )
+
+    if arguments.get("preferred_roles") == "null":
+        arguments["preferred_roles"] = []
+
+    if arguments.get("preferred_roles") is None:
+        arguments["preferred_roles"] = []
+
+    if arguments.get("experience_years") == "null":
+        arguments["experience_years"] = None
+
+    if arguments.get("name") == "null":
+        arguments["name"] = None
+
+    if arguments.get("education") == "null":
+        arguments["education"] = None
+
+    return arguments
     return arguments
 
 def generate_explanations(candidate, ranked_jobs):

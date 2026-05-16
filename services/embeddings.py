@@ -1,11 +1,28 @@
-from sentence_transformers import SentenceTransformer
+import requests
+import os
 
-model = SentenceTransformer(
+HF_API_KEY = os.getenv("HF_API_KEY")
+
+API_URL = (
+    "https://api-inference.huggingface.co/"
+    "pipeline/feature-extraction/"
     "sentence-transformers/all-MiniLM-L6-v2"
 )
 
-def get_embedding(text: str):
+headers = {
+    "Authorization": f"Bearer {HF_API_KEY}"
+}
 
-    embedding = model.encode(text)
+def get_embedding(text):
 
-    return embedding.tolist()
+    response = requests.post(
+        API_URL,
+        headers=headers,
+        json={
+            "inputs": text
+        }
+    )
+
+    embedding = response.json()
+
+    return embedding

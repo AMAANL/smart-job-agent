@@ -5,7 +5,7 @@ HF_API_KEY = os.getenv("HF_API_KEY")
 
 API_URL = (
     "https://router.huggingface.co/hf-inference/models/"
-    "sentence-transformers/all-MiniLM-L6-v2"
+    "BAAI/bge-small-en-v1.5"
 )
 
 headers = {

@@ -100,19 +100,21 @@ Original Resume:
 @app.post("/refine")
 def refine(req: RefineRequest):
 
-    updated_resume = f"""
-    Original Resume:
-    {req.resume_text}
+    try:
 
-    Candidate Clarification:
-    {req.candidate_answer}
-    """
+        updated_resume = f"""
+        Original Resume:
+        {req.resume_text}
 
-    candidate = parse_resume(
-        updated_resume
-    )
+        Candidate Clarification:
+        {req.candidate_answer}
+        """
 
-    structured_resume = f"""
+        candidate = parse_resume(
+            updated_resume
+        )
+
+        structured_resume = f"""
 Candidate Name:
 {candidate.get('name')}
 
@@ -129,17 +131,30 @@ Resume:
 {updated_resume}
 """
 
-    reranked = rank_jobs(
-        structured_resume
-    )
+        reranked = rank_jobs(
+            structured_resume
+        )
 
-    explained_jobs = generate_explanations(
-        candidate,
-        reranked
-    )
+        explained_jobs = generate_explanations(
+            candidate,
+            reranked
+        )
 
-    return {
-        "ranked_jobs": explained_jobs,
-        "reasoning":
-        "Job rankings were updated using the candidate's clarification response."
-    }
+        return {
+            "candidate": {
+                "name": candidate.get("name"),
+                "skills": candidate.get("skills"),
+                "experience_years":
+                    candidate.get("experience_years")
+            },
+            "ranked_jobs": explained_jobs,
+            "reasoning":
+            "Job rankings were updated using the candidate clarification."
+        }
+
+    except Exception as e:
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
